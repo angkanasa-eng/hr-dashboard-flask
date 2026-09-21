@@ -22,7 +22,11 @@ HTML_TEMPLATE = """
 </head>
 <body>
     <div class="container py-4">
-        <h2 class="mb-4 text-primary">📊 HR Analytics & Dashboard</h2>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary m-0">📊 HR Analytics & Dashboard</h2>
+            <!-- ปุ่มเคลียร์ข้อมูล -->
+            <button id="btnClear" class="btn btn-outline-danger" style="display: none;" onclick="clearData()">🗑️ ล้างข้อมูลทั้งหมด</button>
+        </div>
 
         <div class="card mb-4 shadow-sm">
             <div class="card-body">
@@ -152,6 +156,7 @@ HTML_TEMPLATE = """
 
                     document.getElementById('filterSection').style.display = 'block';
                     document.getElementById('dashboardContent').style.display = 'block';
+                    document.getElementById('btnClear').style.display = 'block';
                     
                     loadDashboardData();
                 } else {
@@ -220,6 +225,27 @@ HTML_TEMPLATE = """
                 options: { responsive: true }
             });
             setChart(newChart);
+        }
+
+        // ฟังก์ชันสำหรับเคลียร์ข้อมูล
+        async function clearData() {
+            if (!confirm('คุณต้องการล้างข้อมูลทั้งหมดใช่หรือไม่?')) return;
+
+            try {
+                await fetch('/api/clear', { method: 'POST' });
+                
+                // รีเซ็ตฟอร์มและซ่อนส่วนแสดงผล
+                document.getElementById('fileInput').value = '';
+                document.getElementById('uploadAlert').innerHTML = '<div class="alert alert-secondary">ล้างข้อมูลเรียบร้อยแล้ว</div>';
+                document.getElementById('filterSection').style.display = 'none';
+                document.getElementById('dashboardContent').style.display = 'none';
+                document.getElementById('btnClear').style.display = 'none';
+
+                if (deptChartObj) deptChartObj.destroy();
+                if (perfChartObj) perfChartObj.destroy();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาดในการล้างข้อมูล');
+            }
         }
     </script>
 </body>
@@ -303,5 +329,11 @@ def get_data():
         'table': table_data
     })
 
-# Export WSGI app
+# API Route สำหรับล้างข้อมูล
+@app.route('/api/clear', methods=['POST'])
+def clear_data():
+    global df_data
+    df_data = None
+    return jsonify({'message': 'ล้างข้อมูลเรียบร้อยแล้ว'})
+
 handler = app
