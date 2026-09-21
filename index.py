@@ -3,11 +3,12 @@ import io
 from flask import Flask, render_template, request, jsonify
 import pandas as pd
 
-# กำหนดเส้นทางโฟลเดอร์ templates ให้ถูกต้องบน Vercel
-template_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'templates'))
+# กำหนด Path ของโฟลเดอร์ templates ให้ตรงกับโครงสร้าง Vercel
+current_dir = os.path.dirname(os.path.abspath(__file__))
+template_dir = os.path.join(current_dir, '..', 'templates')
+
 app = Flask(__name__, template_folder=template_dir)
 
-# ตัวแปรเก็บข้อมูลชั่วคราว (Global DataFrame)
 df_data = None
 
 @app.route('/')
@@ -26,14 +27,10 @@ def upload_file():
 
     try:
         content = file.read().decode('utf-8', errors='ignore')
-        # ตรวจสอบตัวคั่นข้อมูล (Comma หรือ Tab)
         delimiter = '\t' if '\t' in content else ','
         df_data = pd.read_csv(io.StringIO(content), sep=delimiter)
-        
-        # จัดการชื่อคอลัมน์ตัด space ออก
         df_data.columns = df_data.columns.str.strip()
 
-        # สร้างตัวเลือก Filters
         departments = sorted(df_data['Department'].dropna().unique().tolist()) if 'Department' in df_data.columns else []
         statuses = sorted(df_data['EmploymentStatus'].dropna().unique().tolist()) if 'EmploymentStatus' in df_data.columns else []
         perf_scores = sorted(df_data['PerformanceScore'].dropna().unique().tolist()) if 'PerformanceScore' in df_data.columns else []
@@ -57,7 +54,6 @@ def get_data():
 
     filtered_df = df_data.copy()
 
-    # กรองข้อมูลตาม Parameters
     dept = request.args.get('department')
     status = request.args.get('status')
     perf = request.args.get('performance')
@@ -69,16 +65,13 @@ def get_data():
     if perf and perf != 'All' and 'PerformanceScore' in filtered_df.columns:
         filtered_df = filtered_df[filtered_df['PerformanceScore'] == perf]
 
-    # คำนวณ KPI
     total_emp = len(filtered_df)
     avg_pay = round(filtered_df['PayRate'].mean(), 2) if 'PayRate' in filtered_df.columns and total_emp > 0 else 0
     active_emp = len(filtered_df[filtered_df['EmploymentStatus'] == 'Active']) if 'EmploymentStatus' in filtered_df.columns else 0
 
-    # ข้อมูลสำหรับกราฟ
     dept_chart = filtered_df['Department'].value_counts().to_dict() if 'Department' in filtered_df.columns else {}
     perf_chart = filtered_df['PerformanceScore'].value_counts().to_dict() if 'PerformanceScore' in filtered_df.columns else {}
 
-    # ข้อมูลตาราง (จำกัด 100 แถว)
     table_data = filtered_df.head(100).fillna('').to_dict(orient='records')
 
     return jsonify({
@@ -94,5 +87,5 @@ def get_data():
         'table': table_data
     })
 
-if __name__ == '__main__':
-    app.run(debug=True)
+# จำเป็นสำหรับ Vercel Serverless
+app_instance = app
