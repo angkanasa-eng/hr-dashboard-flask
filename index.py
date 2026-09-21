@@ -6,7 +6,6 @@ app = Flask(__name__)
 
 df_data = None
 
-# โค้ดหน้าจอ HTML แบบอ่านตรงไม่ต้องพึ่งโฟลเดอร์ templates
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="th">
@@ -228,7 +227,8 @@ HTML_TEMPLATE = """
 """
 
 @app.route('/')
-def home():
+@app.route('/<path:path>')
+def home(path=None):
     return render_template_string(HTML_TEMPLATE)
 
 @app.route('/api/upload', methods=['POST'])
@@ -302,3 +302,6 @@ def get_data():
         },
         'table': table_data
     })
+
+# Export WSGI app
+handler = app
